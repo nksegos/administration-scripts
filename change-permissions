@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+FILE="users_with_broken_perms.txt" # File containing user account names
+LDAPURI="localhost:389" # LDAP server URI
+BASEDN=""  # LDAP Base DN
+BINDDN=""  # LDAP Bind DN
+PASS=""    # LDAP Bind Password
+UNIX_GID=""
+PERMS="700"
+
+i=1 # initialise spinner
+sp="/-\|" # initialise spinner
+
+for args in $*  # arg parsing
+do
+	case ${args} in
+        --help|-h)
+		    HELP="1";
+		    ;;
+        --file|-f)
+	        FILE=$2;
+            shift 2
+            ;;
+        --uri|-u)
+            LDAPURI=$2
+            shift 2
+            ;;
+        --binddn|-d)
+           BINDDN=$2
+           shift 2
+           ;;
+        --bindpw|-w)
+            PASS=$2
+            shift 2
+            ;;
+        --basedn|-b)
+            BASEDN=$2
+            shift 2
+            ;;
+        --ugid|-g)
+            UNIX_GID=$2
+            shift 2
+            ;;
+        --perms|-p)
+            PERMS=$2
+            shift 2
+            ;;
+	esac
+done
+if [[ "$HELP" == "1" ]];
+then
+    printf "Options and arguments:\n"
+    echo "-h | --help Displays a usage message and exits."
+    echo "-f | --file Specifies the file in which the accounts that require fixed permissions exist. (default: users_with_broken_perms.txt)"
+    echo "-u | --uri Specifies the LDAP server URI. (default: localhost:389)"
+    echo "-d | --binddn Specifies the LDAP server's Bind DN. (default: None)"
+    echo "-w | --bindpw Specifies the LDAP server's Bind Password. (default: None)"
+    echo "-b | --basedn Specifies the LDAP server's Base DN. (default: None)"
+    echo "-g | --uguid Specifies the user account gid. (default: group 'user')"
+    echo "-p | --perms Specifies the user homedir permissions. (default: 700)"
+    exit 0
+fi
+
+if [[ "$BINDDN" == "" ]];
+then
+    echo -n "Enter Bind DN: "
+    read BINDDN
+    printf "\n"
+fi
+
+if [[ "$BASEDN" == "" ]];
+then
+    echo -n "Enter Base DN: "
+    read BASEDN
+    printf "\n"
+fi
+
+if [[ "$PASS" == "" ]];
+then
+    echo -n "Enter Bind password:"
+    read -s PASS
+    printf "\n"
+fi
+
+if [[ ! -f "$FILE" ]];
+then
+    echo "Userbase file not found!"
+    echo -n "Specify userbase file: "
+    read FILE
+    printf "\n"
+fi
+
+printf "\nFixing homedir and mail permissions for given users..."
+echo -n ' '
+
+cat ${FILE} | while read line ; do # foreach specified user
+    printf "\b${sp:i++%${#sp}:1}" # spinner
+	USER='cn='${line}
+	USERDN=${USER}','${BASEDN}
+	FIXEDUID="$(ldapsearch -xLLL -H ldap://${LDAPURI} -D ${BINDDN} -w ${PASS} -b ${USERDN} &> /dev/null || grep -w 'uidNumber' | cut -d' ' -f2-)"
+
+	if [[ "$UNIX_GID" == "" ]];
+    then
+        UNIX_GID = ${FIXEDUID}
+    fi
+
+	chown -R ${FIXEDUID}:${UNIX_GID} /home/${line}/
+    chown ${FIXEDUID}:mail /var/mail/${line}
+	chmod ${PERMS} /home/${line}/
+done
