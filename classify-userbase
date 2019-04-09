@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+
+FILE="users_to_be_checked.txt" # File containing userbase
+LDAPURI="localhost:389" # LDAP server URI
+BASEDN=""  # LDAP Base DN
+BINDDN=""  # LDAP Bind DN
+PASS=""    # LDAP Bind Password
+
+i=1 # initialise spinner
+sp="/-\|" # initialise spinner
+
+for args in $*  # arg parsing
+do
+	case ${args} in
+        --help|-h)
+		    HELP="1";
+		    ;;
+        --file|-f)
+	        FILE=$2;
+            shift 2
+            ;;
+        --uri|-u)
+            LDAPURI=$2
+            shift 2
+            ;;
+        --binddn|-d)
+           BINDDN=$2
+           shift 2
+           ;;
+        --bindpw|-w)
+            PASS=$2
+            shift 2
+            ;;
+        --basedn|-b)
+            BASEDN=$2
+            shift 2
+            ;;
+	esac
+done
+if [[ "$HELP" == "1" ]];
+then
+    printf "Options and arguments:\n"
+    echo "-h | --help Displays a usage message and exits."
+    echo "-f | --file Specifies the file in which the userbase exists. (default: users_to_be_checked.txt)"
+    echo "-u | --uri Specifies the LDAP server URI. (default: localhost:389)"
+    echo "-d | --binddn Specifies the LDAP server's Bind DN. (default: None)"
+    echo "-w | --bindpw Specifies the LDAP server's Bind Password. (default: None)"
+    echo "-b | --basedn Specifies the LDAP server's Base DN. (default: None)"
+    exit 0
+fi
+
+if [[ "$BINDDN" == "" ]];
+then
+    echo -n "Enter Bind DN: "
+    read BINDDN
+    printf "\n"
+fi
+
+if [[ "$BASEDN" == "" ]];
+then
+    echo -n "Enter Base DN: "
+    read BASEDN
+    printf "\n"
+fi
+
+if [[ "$PASS" == "" ]];
+then
+    echo -n "Enter Bind password:"
+    read -s PASS
+    printf "\n"
+fi
+
+if [[ ! -f "$FILE" ]];
+then
+    echo "Userbase file not found!"
+    echo -n "Specify userbase file: "
+    read FILE
+    printf "\n"
+fi
+
+printf "\nClassifying given userbase..."
+echo -n ' '
+
+cat ${FILE} | while read line ; do # foreach specified user
+    printf "\b${sp:i++%${#sp}:1}" # spinner
+	USER='cn='${line}
+	USERDN=${USER}','${BASEDN}
+	SEARCHSTR="$(ldapsearch -xLLL -H ldap://${LDAPURI} -D ${BINDDN} -w ${PASS} -b ${USERDN} &> /dev/null | grep -w 'PWDLASTSET:' )" # get user expiry attribute and suppress error output if the user doesn't exist anymore
+    if [[ $? -eq 0 ]];
+    then
+        ACTIVE="$(grep -cw 'PWDLASTSET: 0' <<< "$SEARCHSTR" )" # reverse grep on expiry attribute
+        if [[ ${ACTIVE} -eq 0 ]]; # if user is not expired
+        then
+            printf "$line\n" >> active_users.txt
+        else
+            printf "$line\n" >> inactive_users.txt
+        fi
+    else
+        printf "$line\n" >> inactive_users.txt
+    fi
+done
+printf "\nDone!\n"
+exit 0
