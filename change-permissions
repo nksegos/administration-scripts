@@ -80,12 +80,12 @@ fi
 
 if [[ ! -f "$FILE" ]];
 then
-    echo "Userbase file not found!"
+    echo -n "Userbase file not found!"
     echo -n "Specify userbase file: "
     read FILE
 fi
 
-echo "\nFixing homedir and mail permissions for given users..."
+printf "\nFixing homedir and mail permissions for given users..."
 echo -n ' '
 
 cat ${FILE} | while read line ; do # foreach specified user
