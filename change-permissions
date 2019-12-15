@@ -48,15 +48,15 @@ do
 done
 if [[ "$HELP" == "1" ]];
 then
-    printf "Options and arguments:\n"
-    echo "-h | --help Displays a usage message and exits."
-    echo "-f | --file Specifies the file in which the accounts that require fixed permissions exist. (default: users_with_broken_perms.txt)"
-    echo "-u | --uri Specifies the LDAP server URI. (default: localhost:389)"
-    echo "-d | --binddn Specifies the LDAP server's Bind DN. (default: None)"
-    echo "-w | --bindpw Specifies the LDAP server's Bind Password. (default: None)"
-    echo "-b | --basedn Specifies the LDAP server's Base DN. (default: None)"
-    echo "-g | --uguid Specifies the user account gid. (default: group 'user')"
-    echo "-p | --perms Specifies the user homedir permissions. (default: 700)"
+    echo "Options and arguments:"
+    echo " 	-h | --help Displays a usage message and exits."
+    echo " 	-f | --file Specifies the file in which the accounts that require fixed permissions exist. (default: users_with_broken_perms.txt)"
+    echo " 	-u | --uri Specifies the LDAP server URI. (default: localhost:389)"
+    echo " 	-d | --binddn Specifies the LDAP server's Bind DN. (default: None)"
+    echo " 	-w | --bindpw Specifies the LDAP server's Bind Password. (default: None)"
+    echo " 	-b | --basedn Specifies the LDAP server's Base DN. (default: None)"
+    echo " 	-g | --uguid Specifies the user account gid. (default: group 'user')"
+    echo " 	-p | --perms Specifies the user homedir permissions. (default: 700)"
     exit 0
 fi
 
@@ -64,21 +64,18 @@ if [[ "$BINDDN" == "" ]];
 then
     echo -n "Enter Bind DN: "
     read BINDDN
-    printf "\n"
 fi
 
 if [[ "$BASEDN" == "" ]];
 then
     echo -n "Enter Base DN: "
     read BASEDN
-    printf "\n"
 fi
 
 if [[ "$PASS" == "" ]];
 then
     echo -n "Enter Bind password:"
     read -s PASS
-    printf "\n"
 fi
 
 if [[ ! -f "$FILE" ]];
@@ -86,10 +83,9 @@ then
     echo "Userbase file not found!"
     echo -n "Specify userbase file: "
     read FILE
-    printf "\n"
 fi
 
-printf "\nFixing homedir and mail permissions for given users..."
+echo "\nFixing homedir and mail permissions for given users..."
 echo -n ' '
 
 cat ${FILE} | while read line ; do # foreach specified user
